@@ -427,8 +427,8 @@ if st.sidebar.checkbox('Nâng cao: thay đổi các giả định'):
                                        min_value=mu.DEATH_RATE, max_value=15.0, step=0.01)
         mu.HOSPITAL_RATE = st.sidebar.slider('Tỉ lệ nhập viện', value=max(mu.ICU_RATE, mu.HOSPITAL_RATE),
                                        min_value=mu.ICU_RATE, max_value=20.0, step=0.01)
-        mu.SYMPTOM_RATE = st.sidebar.slider('Tỉ lệ có triệu chứng đáng k', value=max(mu.SYMPTOM_RATE, mu.HOSPITAL_RATE),
-                                       min_value=mu.HOSPITAL_RATE, max_vaểlue=25.0, step=0.01)
+        mu.SYMPTOM_RATE = st.sidebar.slider('Tỉ lệ có triệu chứng nặng', value=max(mu.SYMPTOM_RATE, mu.HOSPITAL_RATE),
+                                       min_value=mu.HOSPITAL_RATE, max_value=25.0, step=0.01)
     if st.sidebar.checkbox('Thay  đổi thời gian - ngày'):
         mu.INFECT_2_HOSPITAL_TIME = st.sidebar.slider('Từ nhiễm đến nhập viện',
                                                       value=mu.INFECT_2_HOSPITAL_TIME, min_value=1, max_value=21)
