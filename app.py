@@ -20,18 +20,18 @@ mu.ICU_2_RECOVER_TIME = 7
 mu.NOT_ICU_DISCHARGE_TIME = 5
 
 st.set_page_config(
-    page_title="Covid-19 Prediction",
+    page_title="Dự báo Covid-19",
     initial_sidebar_state="expanded",
 )
-st.title('Covid-19 Prediction')
+st.title('Dự báo Covid-19')
 hide_menu_style = """
         <style>
         #MainMenu {visibility: hidden;}
         </style>
         """
 st.markdown(hide_menu_style, unsafe_allow_html=True)
-st.markdown('COVID-19:  The prognosis for next 2 months. '
-            ' How many hospital beds or ICU needed? In every countries and US states. ')
+st.markdown('COVID-19:  Dự báo cho 2 tháng tới. '
+            ' Cần bao nhiêu giường bệnh hoặc ICU?')
 
 
 def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, forecast_fun, debug_fun, metrics, show_debug,
@@ -39,29 +39,30 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
     data_load_state = st.text('Forecasting...')
     try:
         daily, cumulative, model_beta = forecast_fun(local, local_sub_level,
+                                                     scope=scope,
                                                      forecast_horizon=forecast_horizon,
                                                      policy_change_dates=policy_change_dates,
                                                      back_test=back_test, last_data_date=last_data_date,
                                                      use_vaccine_data=use_vaccine_data)
 
     except ValueError as e:
-        st.error('Not enough fatality data to provide prognosis, also, please check input and lockdown date')
+        st.error('Chưa đủ số liệu về tử vong để dự báo. Kiểm tra lại thông tin đầu vào và ngày giãn cách')
         mu.append_row_2_logs([dt.datetime.today(), scope, local, local_sub_level, policy_change_dates, forecast_horizon,
-                              last_data_date, e], 'prognosis/logs/app_errors.log')
+                              last_data_date, e], 'logs/app_errors.log')
         return None
     except IndexError as e:
-        st.error('You found a bug in the code. Let me report it to my master!')
+        st.error('Code có lỗi. Báo ngay cho tác giả!')
         mu.append_row_2_logs([dt.datetime.today(), scope, local, local_sub_level, policy_change_dates, forecast_horizon,
-                              last_data_date, e], 'prognosis/logs/app_errors.log')
+                              last_data_date, e], 'logs/app_errors.log')
         return None
 
-    data_load_state.text('Forecasting... done!')
+    data_load_state.text('Đang dự báo.. Hoàn thành!')
 
-    st.subheader('Deaths')
+    st.subheader('Số tử vong')
     show_metrics = ['death', 'predicted_death', '7d_avg_death']
-    fig = daily[show_metrics].rename(columns={'death': 'observed',
-                                              'predicted_death': 'predicted',
-                                              '7d_avg_death': '7d average observed'})\
+    fig = daily[show_metrics].rename(columns={'death': 'công bố',
+                                              'predicted_death': 'dự báo',
+                                              '7d_avg_death': 'trung bình 7 ngày'})\
         .drop(columns=['ICU', 'hospital_beds'], errors='ignore').iplot(asFigure=True)
     x = daily.index
     y_upper = daily.upper_bound.values
@@ -74,7 +75,7 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
         line_color='rgba(128,128,128,0)',
         legendgroup='Confidence Interval',
         showlegend=True,
-        name='Upper Bound'))
+        name='Cận trên'))
 
     fig.add_trace(go.Scatter(
         x=x,
@@ -84,7 +85,7 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
         line_color='rgba(128,128,128,0)',
         showlegend=True,
         legendgroup='Confidence Interval',
-        name='Lower Bound'
+        name='Cận dưới'
     ))
     if back_test:
         max_y = np.nanmax(y_upper)
@@ -96,19 +97,19 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
             mode='lines',
             hovertext=str(last_data_date),
             hoverinfo="x+name",
-            name='Last day of fitted data'
+            name='Dùng dữ liệu đến ngày'
         ))
     fig.update_layout(
-        title="Covid19 Daily " + local + ", " + local_sub_level,
-        yaxis_title="Death",
+        title="Covid19 Số Hàng Ngày " + local + ", " + local_sub_level,
+        yaxis_title="Tử vong",
         hovermode='x',
-        legend_title='<b> Death </b>',
+        legend_title='<b> Tử vong </b>',
     )
     st.plotly_chart(fig)
 
     show_metrics = ['death', 'predicted_death']
-    fig = cumulative[show_metrics].rename(columns={'death': 'observed',
-                                                   'predicted_death': 'predicted'})\
+    fig = cumulative[show_metrics].rename(columns={'death': 'công bố',
+                                                   'predicted_death': 'dự báo'})\
         .iplot(asFigure=True)
     x = cumulative.index
     y_upper = cumulative.upper_bound.values
@@ -119,7 +120,7 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
         fill=None,
         line_color='rgba(128,128,128,0)',
         legendgroup = 'CI',
-        name='Upper Bound'))
+        name='Cận trên'))
 
     fig.add_trace(go.Scatter(
         x=x,
@@ -128,7 +129,7 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
         fillcolor='rgba(66, 164, 245,0.1)',
         line_color='rgba(128,128,128,0)',
         legendgroup='CI',
-        name='Lower Bound'
+        name='Cận dưới'
     ))
     if back_test:
         max_y = np.nanmax(y_upper)
@@ -140,22 +141,22 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
             mode='lines',
             hovertext=str(last_data_date),
             hoverinfo="x+name",
-            name='Last day of fitted data'
+            name='Ngày dữ liệu cuối'
         ))
 
     fig.update_layout(
-        title="Covid19 Cumulative " + local + ", " + local_sub_level,
-        yaxis_title="Death",
+        title="Covid19 Tích lũy " + local + ", " + local_sub_level,
+        yaxis_title="Tử vong",
         hovermode='x',
-        legend_title='<b> Death </b>'
+        legend_title='<b> Tử vong </b>'
     )
 
     st.plotly_chart(fig)
 
     if show_debug:
-        log_fit, _ = debug_fun(local, local_sub_level, forecast_horizon=forecast_horizon, policy_change_dates=policy_change_dates,
+        log_fit, _ = debug_fun(local, local_sub_level, scope=scope, forecast_horizon=forecast_horizon, policy_change_dates=policy_change_dates,
                                back_test=back_test, last_data_date=last_data_date)
-        fig = log_fit.rename(columns={'death': '7d_avg_observed', 'orig_death': 'observed', 'predicted_death': 'predicted'})\
+        fig = log_fit.rename(columns={'death': 'trung bình 7 ngày' , 'orig_death': 'công bố', 'predicted_death': 'dự báo'})\
             .drop(columns=['lower_bound', 'upper_bound', 'time_idx'], errors='ignore').iplot(asFigure=True)
         x = log_fit.index
         y_upper = log_fit.upper_bound.values
@@ -166,7 +167,7 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
             fill=None,
             line_color='rgba(128,128,128,0)',
             legendgroup='CI',
-            name='Upper Bound'))
+            name='Cận trên'))
 
         fig.add_trace(go.Scatter(
             x=x,
@@ -175,7 +176,7 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
             fillcolor='rgba(66, 164, 245,0.1)',
             line_color='rgba(128,128,128,0)',
             legendgroup='CI',
-            name='Lower Bound'
+            name='Cận dưới'
         ))
         if back_test:
             max_y = np.nanmax(y_upper)
@@ -187,20 +188,20 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
                 mode='lines',
                 hovertext=str(last_data_date),
                 hoverinfo="x+name",
-                name='Last day of fitted data'
+                name='Dùng dữ liệu đến ngày'
             ))
         fig.update_layout(
-            title="Fitted log of daily death before and after lock down being effective",
-            yaxis_title="Log Daily Death",
+            title="Đường logarithm của số ca tử vong hàng ngày",
+            yaxis_title="Logarithm của số ca tử vong hàng ngày",
             hovermode='x',
-            legend_title='<b> Death </b>',
+            legend_title='<b> Tử vong </b>',
         )
         st.plotly_chart(fig)
 
-    st.subheader('Estimated Cases and Essential Resources')
-    st.markdown('Since health care systems vary widely between geographic location, if this is used for planning, '
-                'please check the advance box on the sidebar to update with the appropriate parameters')
-    fig = daily.rename(columns={'ICU': 'current_ICU', 'hospital_beds': 'current_hospital_beds'})\
+    st.subheader('Dự báo số ca và các nguồn lực y tế thiết yếu')
+    st.markdown('Do hệ thống y tế ở các địa phương khác nhau, nếu dùng các chỉ số này để lập kế hoạch, '
+                'cần kiểm tra hộp thông số nâng cao để cập nhật các thông số tương ứng. ')
+    fig = daily.rename(columns={'ICU': 'Số bệnh nhân ở ICU', 'hospital_beds': 'số bệnh nhân nằm viện'})\
         .drop(columns=['lower_bound', 'upper_bound', '7d_avg_death'], errors='ignore').iplot(asFigure=True)
     x = daily.index
     y_upper = daily.upper_bound.values
@@ -246,7 +247,7 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
             mode='lines',
             hovertext=str(last_data_date),
             hoverinfo="x+name",
-            name='Last day of fitted data'
+            name='Dùng dữ liệu đến ngày'
         ))
     if scope == 'US' and local_sub_level == 'All':
         hospital_cap = mu.get_US_State_hospital_cap_data()
@@ -268,9 +269,9 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
         except KeyError:
             pass
     fig.update_layout(
-        title="Covid19 Daily " + local + ", " + local_sub_level,
+        title="Covid19 Hàng Ngày " + local + ", " + local_sub_level,
         hovermode='x',
-        legend_title='<b> Number of ... </b>',
+        legend_title='<b> Số ... </b>',
     )
 
     st.plotly_chart(fig)
@@ -317,105 +318,127 @@ def main(scope, local, local_sub_level, policy_change_dates, forecast_horizon, f
             mode='lines',
             hovertext=str(last_data_date),
             hoverinfo="x+name",
-            name='Last day of fitted data'
+            name='Dùng dữ liệu đến ngày'
         ))
 
     fig.update_layout(
-        title="Covid19 Cumulative " + local + ", " + local_sub_level,
+        title="Covid19 Tích lũy " + local + ", " + local_sub_level,
         hovermode='x',
-        legend_title='<b> Number of ... </b>',
+        legend_title='<b> Số ... </b>',
     )
 
     st.plotly_chart(fig)
 
     if show_data:
-        st.subheader('Raw Output Data')
+        st.subheader('Dữ liệu xuất')
         st.markdown(mu.get_table_download_link(daily,
                     filename='daily_'+local+'_'+local_sub_level+'_'+str(dt.date.today())+'.csv'),
                     unsafe_allow_html=True)
-        st.write('Daily metrics', daily)
+        st.write('Hàng ngày', daily)
         st.markdown(mu.get_table_download_link(cumulative,
                     filename='cumulative_' + local + '_'+local_sub_level+'_' + str(dt.date.today()) + '.csv'),
                     unsafe_allow_html=True)
-        st.write('Cumulative metrics', cumulative)
+        st.write('Tích lũy', cumulative)
     mu.append_row_2_logs([dt.datetime.today(), scope, local, model_beta], 'logs/fitted_models.csv')
 
 
 run_click = st.sidebar.button('Click to run')
-scope = st.sidebar.selectbox('World or US', ['World', 'US'], index=0)
+scope = st.sidebar.selectbox('Thế giới, Mỹ hoặc Việt Nam', ['World', 'US', 'VN'], index=0)
 if scope == 'World':
     #data_load_state = st.text('Loading data...')
     death_data = mu.get_data(scope='global', type='deaths')
     #data_load_state.text('Loading data... done!')
-    local = st.sidebar.selectbox('Country', death_data.Country.unique(), index=181)
-    local_sub_level = st.sidebar.selectbox('Province/State', ['All', ] + death_data.query('Country == "{}"'\
+    local = st.sidebar.selectbox('Nước', death_data.Country.unique(), index=181)
+    local_sub_level = st.sidebar.selectbox('Tỉnh/Thành Phố/State', ['All', ] + death_data.query('Country == "{}"'\
                                                         .format(local)).State.dropna().unique().tolist(), index=0)
     forecast_fun = mu.get_metrics_by_country
     debug_fun = mu.get_log_daily_predicted_death_by_country
     policy_date_fun = mu.get_policy_change_dates_by_country
-else:
+elif scope == 'US':
     #data_load_state = st.text('Loading data...')
-    death_data = mu.get_data(scope='US', type='deaths')
+    death_data = mu.get_data(scope=scope, type='deaths')
     #data_load_state.text('Loading data... done!')
     local = st.sidebar.selectbox('State', death_data.State.unique(), index=5)
     local_sub_level = st.sidebar.selectbox('County', ['All', ] + death_data.query('State == "{}"'\
                         .format(local)).County.dropna().unique().tolist(), index=0)
 
-    forecast_fun = mu.get_metrics_by_state_US
-    debug_fun = mu.get_log_daily_predicted_death_by_state_US
+    forecast_fun = mu.get_metrics_by_state
+    debug_fun = mu.get_log_daily_predicted_death_by_state
     policy_date_fun = mu.get_policy_change_dates_by_state_US
+elif scope == 'VN':
+    mu.DEATH_RATE = 1.25
+    mu.ICU_RATE = 3.75
+    mu.HOSPITAL_RATE = 7.5
+    mu.SYMPTOM_RATE = 12.5
+    mu.INCUBATE_TIME = 4
+    mu.INFECT_2_HOSPITAL_TIME = 11
+    mu.HOSPITAL_2_ICU_TIME = 4
+    mu.ICU_2_DEATH_TIME = 4
+    mu.ICU_2_RECOVER_TIME = 7
+    mu.NOT_ICU_DISCHARGE_TIME = 5
+    death_data = mu.get_data(scope=scope, type='deaths')
+    # data_load_state.text('Loading data... done!')
+    local = st.sidebar.selectbox('Tỉnh/Thành Phố', death_data.State.unique(), index=0)
+    local_sub_level = st.sidebar.selectbox('Quận/Huyện', ['All', ] + death_data.query('State == "{}"' \
+                                                                                  .format(
+        local)).County.dropna().unique().tolist(), index=0)
+
+    forecast_fun = mu.get_metrics_by_state
+    debug_fun = mu.get_log_daily_predicted_death_by_state
+    policy_date_fun = mu.get_policy_change_dates_by_state_VN
 
 default_dates = policy_date_fun(local)
 default_dates = [to_datetime(pdate).date() for pdate in default_dates]
 default_dates = list(filter(None, default_dates))
 date_options = date_range(start='2020/02/01', end=dt.date.today()+dt.timedelta(7)).tolist()
 date_options = default_dates + [s.date() for s in date_options[::-1]]
-policy_change_dates = st.sidebar.multiselect('Significant policy change dates, e.g. lockdown, relax, mask policy ..'
-                                             'IMPORTANT to get good forecast',
+policy_change_dates = st.sidebar.multiselect('Ngày thay đổi chính sách, như giãn cách, phong tỏa..'
+                                             ' RẤT QUAN TRỌNG để có dự báo chính xác',
                                              options=date_options, default=default_dates)
 policy_change_dates.sort()
-forecast_horizon = st.sidebar.slider('Forecast Horizon (days)', value=60, min_value=30, max_value=90)
-show_debug = st.sidebar.checkbox('Show fitted log death', value=True)
-use_vaccine_data = st.sidebar.checkbox('Use vaccine data in model', value=True)
-
-'You selected: ', local, ', ', local_sub_level, 'with policy change dates:', \
+forecast_horizon = st.sidebar.slider('Độ dài dự báo (ngày)', value=60, min_value=30, max_value=90)
+show_debug = st.sidebar.checkbox('Hiển thị đường logarithm số ca tử vong', value=True)
+use_vaccine_data = st.sidebar.checkbox('Dùng dữ liệu về vắc xin trong mô hình', value=True)
+if scope == 'VN':
+    use_vaccine_data = False
+'Bạn chọn: ', local, ', ', local_sub_level, 'với ngày thay đổi chính sách:', \
     [date_obj.strftime('%Y-%m-%d') for date_obj in policy_change_dates], \
-    'Click **Run** on left sidebar to see forecast. Plot is interactive. Work best on desktop.'
-show_data = st.sidebar.checkbox('Show raw output data')
+    'Nhấn **Run** ở bên trái màn hình để xem dự báo. Đồ thị tương tác được. Chạy tốt nhất trên máy tính.'
+show_data = st.sidebar.checkbox('Hiện thị dữ liệu xuất')
 
 metrics = ['infected']
-if st.sidebar.checkbox('Hide some metrics'):
-    metrics = st.sidebar.multiselect('Which metrics you like to be invisible by default?',
+if st.sidebar.checkbox('Ẩn một số chỉ số'):
+    metrics = st.sidebar.multiselect('Chỉ số nào bạn muốn ẩn?',
                                      ('death', 'predicted_death', 'infected', 'symptomatic',
                                       'hospitalized', 'confirmed', 'ICU', 'hospital_beds'),
                                      metrics)
 
-back_test = st.sidebar.checkbox('Run back test to evaluate')
+back_test = st.sidebar.checkbox('Chạy back test để đánh giá')
 last_data_date = dt.date.today()
 if back_test:
-    last_data_date = st.sidebar.date_input('Last date of data', dt.date.today()+dt.timedelta(-14))
-    'Run back test with data up to', last_data_date
+    last_data_date = st.sidebar.date_input('Dùng dữ liệu đến ngày ', dt.date.today()+dt.timedelta(-14))
+    'Chạy back test với dữ liệu đến ngày', last_data_date
 
-if st.sidebar.checkbox('Advance: change assumptions'):
-    if st.sidebar.checkbox('Change rates - percentages'):
-        mu.DEATH_RATE = st.sidebar.slider('Overall death rate', value=mu.DEATH_RATE,
+if st.sidebar.checkbox('Nâng cao: thay đổi các giả định'):
+    if st.sidebar.checkbox('Thay đổi tỉ lệ - phần trăm'):
+        mu.DEATH_RATE = st.sidebar.slider('Tỉ lệ tử vong', value=mu.DEATH_RATE,
                                        min_value=0.01, max_value=10.0, step=0.01)
-        mu.ICU_RATE = st.sidebar.slider('ICU rate', value=max(mu.ICU_RATE, mu.DEATH_RATE),
+        mu.ICU_RATE = st.sidebar.slider('Tỉ lệ sử dụng ICU', value=max(mu.ICU_RATE, mu.DEATH_RATE),
                                        min_value=mu.DEATH_RATE, max_value=15.0, step=0.01)
-        mu.HOSPITAL_RATE = st.sidebar.slider('Hospitalized rate', value=max(mu.ICU_RATE, mu.HOSPITAL_RATE),
+        mu.HOSPITAL_RATE = st.sidebar.slider('Tỉ lệ nhập viện', value=max(mu.ICU_RATE, mu.HOSPITAL_RATE),
                                        min_value=mu.ICU_RATE, max_value=20.0, step=0.01)
-        mu.SYMPTOM_RATE = st.sidebar.slider('Symptomatic rate', value=max(mu.SYMPTOM_RATE, mu.HOSPITAL_RATE),
-                                       min_value=mu.HOSPITAL_RATE, max_value=25.0, step=0.01)
-    if st.sidebar.checkbox('Change time - days'):
-        mu.INFECT_2_HOSPITAL_TIME = st.sidebar.slider('Time to hospitalized since infected',
+        mu.SYMPTOM_RATE = st.sidebar.slider('Tỉ lệ có triệu chứng đáng k', value=max(mu.SYMPTOM_RATE, mu.HOSPITAL_RATE),
+                                       min_value=mu.HOSPITAL_RATE, max_vaểlue=25.0, step=0.01)
+    if st.sidebar.checkbox('Thay  đổi thời gian - ngày'):
+        mu.INFECT_2_HOSPITAL_TIME = st.sidebar.slider('Từ nhiễm đến nhập viện',
                                                       value=mu.INFECT_2_HOSPITAL_TIME, min_value=1, max_value=21)
-        mu.HOSPITAL_2_ICU_TIME = st.sidebar.slider('Time to ICU since hospitalized',
+        mu.HOSPITAL_2_ICU_TIME = st.sidebar.slider('Từ nhập viện đến chuyển ICU',
                                                       value=mu.HOSPITAL_2_ICU_TIME, min_value=1, max_value=21)
-        mu.ICU_2_DEATH_TIME = st.sidebar.slider('Time to death since ICU ',
+        mu.ICU_2_DEATH_TIME = st.sidebar.slider('Từ chuyển ICU đến tử vong ',
                                                       value=mu.ICU_2_DEATH_TIME, min_value=1, max_value=21)
-        mu.ICU_2_RECOVER_TIME = st.sidebar.slider('Time to recover since ICU ',
+        mu.ICU_2_RECOVER_TIME = st.sidebar.slider('Từ chuyển ICU đến hồi phục ',
                                                       value=mu.ICU_2_RECOVER_TIME, min_value=1, max_value=30)
-        mu.NOT_ICU_DISCHARGE_TIME = st.sidebar.slider('Time to discharge',
+        mu.NOT_ICU_DISCHARGE_TIME = st.sidebar.slider('Thời gian xuất viện nếu không vào ICU',
                                                       value=mu.NOT_ICU_DISCHARGE_TIME, min_value=1, max_value=21)
 
 if run_click:
@@ -426,20 +449,19 @@ if run_click:
                     mu.SYMPTOM_RATE, mu.INFECT_2_HOSPITAL_TIME, mu.HOSPITAL_2_ICU_TIME, mu.ICU_2_DEATH_TIME, 
                     mu.ICU_2_RECOVER_TIME, mu.NOT_ICU_DISCHARGE_TIME, back_test, last_data_date]
     mu.append_row_2_logs(model_params)
-st.sidebar.subheader('Authors')
+st.sidebar.subheader('Tác giả')
 st.sidebar.info(
 """
 Quoc Tran [LinkedIn](https://www.linkedin.com/in/quoc-tran-wml)  
 Huong Huynh [LinkedIn](https://www.linkedin.com/in/huonghuynhsjsu)  
-Lam Ho [Website](https://www.dal.ca/faculty/science/math-stats/faculty-staff/our-faculty/statistics/lam-ho.html)    
-Feedback: hthuongsc@gmail.com  
-Source Code: [Gibhub](https://github.com/QuocTran/COVID-19.git)  
+Liên hệ: ttquoc@gmail.com  
+Source Code: [Gibhub](https://github.com/QuocTran/Covid19_VN)  
 Data Source: [JHU](https://coronavirus.jhu.edu/map.html)
 """
 )
 
-with st.beta_expander('About the model'):
-    st.subheader('Assumptions')
+with st.beta_expander('Về mô hình'):
+    st.subheader('Các giả định')
     st.markdown('''
             Number of **DEATH** is the most accurate metric, despite [undercount]
             (https://www.nytimes.com/2020/04/10/nyregion/new-york-coronavirus-death-count.html), especially near peak.  
@@ -466,7 +488,7 @@ with st.beta_expander('About the model'):
             local where resource is limited, while people die sooner and more often on ICU just because of not enough
             ICU to put people on. E.g. Iran, Italy, New York when dead cases peak. These also provide higher number
             on ICU and hospital beds needed if lots of patients dying out of hospital as the undercount link above.''')
-    st.subheader('Projections')
+    st.subheader('Các dự báo')
     st.markdown('''
             1. Total number of infection at large: death*278 (not too meaningful) or infected rate in population 
             (for individual and company to quantify risk of infection, for public health dept to declare herd immunity, 
@@ -488,7 +510,7 @@ with st.beta_expander('About the model'):
             Each new death equal to 2.2 ICU beds 4 days before the death and continue for 6 days 
             (using the 0.78% ICU rate and 0.36% death rate and 5.6 days average ICU used).
             ''')
-    st.subheader('Forecasting death')
+    st.subheader('Dự báo ca tử vong')
     st.markdown('''
     Since this is highly contagious disease, daily new death, which is a proxy for daily new infected cases
     is modeled as $d(t)=a*d(t-1)$ or equivalent to $d(t) = b*a^t$.   
@@ -506,7 +528,7 @@ with st.beta_expander('About the model'):
     WARNING: if no lock down happens, please use end date of the forecast period as lock down date. If you have info on 
     lock down date please use it to make sure the model provide accurate result.
             ''')
-    st.subheader('Implications')
+    st.subheader('Hệ quả')
     st.markdown('''
             Implications are observed in data everywhere:  
             
@@ -598,7 +620,7 @@ with st.beta_expander('Medical myths'):
     st.markdown('***Please spread the message and stay safe!***')
     mu.append_row_2_logs([dt.datetime.today(), ], log_file='logs/medical_myths_logs.csv')
 
-with st.beta_expander('References'):
+with st.beta_expander('Mục lục tham khảo'):
     st.markdown('[IHME COVID-19 Infection Spread](https://covid19.healthdata.org) '
                 'Reason we speed up our development. Lots of thing to like. One thing '
                 'we would do differently, the forecasting model.')
@@ -650,7 +672,7 @@ with st.beta_expander('References'):
                 '(https://ourworldindata.org/covid-vaccinations)')
 
 
-    st.subheader('On the news')
+    st.subheader('Tin tức')
     st.markdown('https://www.mercurynews.com/2020/04/11/when-coronavirus-kills-its-like-death-by-drowning-and-doctors-disagree-on-best-treatment/')
     st.markdown('https://www.statnews.com/2020/04/08/doctors-say-ventilators-overused-for-covid-19/')
     st.markdown('https://www.uchicagomedicine.org/forefront/patient-care-articles/helmet-based-ventilation-is-superior-to-face-mask-for-patients-with-respiratory-distress')
@@ -722,6 +744,6 @@ fb_comments = """
         """
 #st.components.v1.html(fb_comments)
 st.components.v1.iframe('https://covid19.aipert.org/google_analytics.html', height=1, scrolling=False)
-with st.beta_expander('Show comments', expanded=True):
+with st.beta_expander('Hiện bình luận', expanded=True):
     st.components.v1.iframe('https://covid19.aipert.org/discuss.html', height=400, scrolling=True)
     st.components.v1.iframe('https://covid19.aipert.org/disqus.html', height=400, scrolling=True)
